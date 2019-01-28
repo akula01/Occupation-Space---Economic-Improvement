@@ -4,4 +4,4 @@ elationships between highly-related occupations take on a higher value while tho
 
 The density of relationships among occupations in three different service sectors is shown below.
 
-![alt text](https://github.com/akula01/Occupation-Space---Economic-Improvement/blob/master/CAPS%202019.png)
+![alt text](https://github.com/akula01/Occupation-Space---Economic-Improvement/blob/master/Images/CAPS%202019.png)
