@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+svg {
+  display: block;
+  margin: 10px auto 0;
+}
+circle.main-circle {
+  stroke: #DDD;
+  stroke-width: 6px;
+  fill: none;
+}
+circle.node {
+  fill: red;
+}
+text.node {
+  font-size: 10px;
+}
+path.edge {
+  stroke-width: 1px;
+  stroke: #CCC;
+  fill: none;
+}
+
+#left {
+  width : 49.48%;
+  float : left;
+  height : 765px;
+  border: 1px solid #000000;
+  position: relative;
+  text-align: center;
+}
+
+#right {
+  width : 49.48%;
+  float : right;
+  height : 765px;
+}
+
+#textual {
+  height : 160px;
+  margin-top: 5px;
+  border: 1px solid #000000;
+}
+
+#inner {   
+  display: block;
+  height : 600px;    
+  border: 1px solid #000000;
+  text-align: center;
+  position: relative;
+}
+
+.header{
+	text-align : center;
+	background: rgb(255, 150, 182); 
+	margin-bottom: 5px;
+}
+
+.cd-node circle {
+  fill: #fff;
+  stroke: black;
+  stroke-width: 1.5px;
+}
+
+.cd-node {
+  font: 10px sans-serif;
+}
+
+.cd-link {
+  fill: none;
+  stroke: #ccc;
+  stroke-width: 1.5px;
+}
+
+
+.node {
+  font: 300 11px "Helvetica Neue", Helvetica, Arial, sans-serif;
+  fill: #f00;
+}
+
+.node:hover {
+  fill: #000;
+}
+
+.link {
+  stroke: steelblue;
+  stroke-opacity: .4;
+  fill: none;
+  pointer-events: none;
+}
+
+.node:hover,
+.node--source,
+.node--target {
+  font-weight: 700;
+}
+
+.node--source {
+  fill: #2ca02c;
+}
+
+.node--target {
+  fill: #d62728;
+}
+
+.link--source,
+.link--target {
+  stroke-opacity: 1;
+  stroke-width: 2px;
+}
+
+.link--source {
+  stroke: #d62728;
+}
+
+.link--target {
+  stroke: #d62728;
+}
+
+</style>
+<body>
+
+<div id="container">
+	<div id="left"> 
+		<div class="header"> Main Graph </div>
+    </div>
+	<div id="right">
+		<div id="inner"> 
+			<div class="header"> Sub Graph </div> 
+			<div id="alert2" class="alert">  <text class="message"> Please hover on any of the nodes to see its connections to another nodes </text> </div>
+		</div>
+		<div id="textual">  <div class="header"> Description </div> </div>
+	</div>
+</div>
+
+<script src="http://d3js.org/d3.v3.min.js"></script>
+<script src="./circleGraph.js"></script>
+<script>
+
+var radius = 250;
+var margin = 50;
+var outerRadius = radius + margin;
+
+var div = d3.select("#inner")
+	.append("div")   
+	.attr("class", "tooltip")              
+	.style("opacity", 0)
+	.attr("width", 1000)
+    .attr("height", 1000);
+    
+function mouseovered(d) {
+    
+  node
+      .each(function(n) { n.target = n.source = false; });
+
+  link
+      .classed("link--target", function(l) { if (l.target === d) return l.source.source = true; })
+      .classed("link--source", function(l) { if (l.source === d) return l.target.target = true; })
+    .filter(function(l) { return l.target === d || l.source === d; })
+      .each(function() { this.parentNode.appendChild(this); });
+
+  node
+      .classed("node--target", function(n) { return n.target; })
+      .classed("node--source", function(n) { return n.source; });
+}
+
+function mouseouted(d) {
+
+  link
+      .classed("link--target", false)
+      .classed("link--source", false);
+
+  node
+      .classed("node--target", false)
+      .classed("node--source", false);
+}
+
+
+d3.json("./data/occupations_graph.json", function(error, data) {
+  var nodes = data['nodes'],
+      edges = data['links'];
+  
+  // Create the layout
+  var circleGraph = d3.layout.circleGraph()
+  .tension(0.7)
+  .radius(radius)
+  .range(Math.PI * 4 / 2)
+  .nodes(nodes)
+  .edges(edges);
+  
+
+   var svg = d3.select('#left')
+  .append('svg')
+  .attr('width', outerRadius * 2)
+  .attr('height', outerRadius * 2)
+  .append('g')
+  .attr('transform', 'translate(' + outerRadius + ', ' + outerRadius + ')');
+
+   // draw main circle
+   svg.append('circle')
+  .classed('main-circle', true)
+  .attr('r', radius);
+
+   // draw edges
+   link = svg.selectAll('path.edge')
+  	.data(edges)
+  	.enter()
+    .append('path')
+    .each(function(d) { d.source = d[0], d.target = d[d.length - 1]; })
+    .attr("class", "link")
+    //.classed('edge', true)
+    .attr('d', circleGraph.line);
+
+   // draw circles
+   node = svg.selectAll('circle.node')
+  	.data(nodes)
+  	.enter()
+    .append('circle')
+    .attr("class", "node")
+    //.classed('node', true)
+    .attr('r', 5)
+    .attr('cx', function (d) { return d.x; })
+    .attr('cy', function (d) { return d.y; })
+    .on("mouseover", mouseovered)
+    .on("mouseout", mouseouted)
+    .on("click",mouseclicked);
+    
+   // draw labels
+   svg.selectAll('text.node')
+  .data(nodes)
+  .enter()
+    .append('text')
+    .classed('node', true)
+    .attr({
+      'text-anchor': function (d) {
+        return (Math.sin(d.radians) < 0) ? 'end' : 'begin';
+      },
+      dy: '0.3em',
+      dx: function(d) {
+        return (Math.sin(d.radians) < 0) ? '-1em' : '1em';
+      },
+      transform: function (d) {
+        var degrees = d.degrees - 90;
+        var xTranslate = radius;
+        if (Math.sin(d.radians) < 0) {
+          degrees -= 180;
+          xTranslate *= -1;
+        }
+        return 'rotate(' + degrees + ') translate(' + xTranslate + ', 0)';
+      }
+    })
+    .text(function(d) {
+      return d.name;
+    });
+    
+});
+
+
+function mouseclicked(d){
+
+	var radius = 150;
+    var margin = 100;
+    var outerRadius = radius + margin;
+
+	var height = 500,
+    	width = 500;
+	
+	d3.select("#inner").selectAll("*:not(.header):not(#interaction):not(#innerscroll):not(.alert):not(.message)").remove();
+	d3.select("#textual").selectAll("*:not(.header)").remove();
+	
+	d3.select("#textual")
+		.append("text")
+		.text("Selected Occupation is: " + d.name)
+		.attr("style","display: block");
+		
+	d3.select("#interaction")
+		.style("display", null);
+	
+	d3.select("#alert1.alert")
+		.style("display","None");
+	
+	d3.select("#alert2.alert")
+		.style("visibility","visible");
+    				
+   	  			
+  	d3.json("./data/occupations_subgraph.json", function(error, data) {
+  	
+  		var nodes = data[d.name]['nodes'],
+        edges = data[d.name]['links'];
+  
+  		// Create the layout
+		var circleGraph = d3.layout.circleGraph()
+							.tension(0.7)
+							.radius(radius)
+							.range(Math.PI * 4 / 2)
+							.nodes(nodes)
+							.edges(edges);
+
+
+		var svg = d3.select('#inner')
+					.append('svg')
+					.attr('width', outerRadius * 2)
+					.attr('height', outerRadius * 2)
+					.append('g')
+					.attr('transform', 'translate(' + outerRadius + ', ' + outerRadius + ')');
+
+		// draw main circle
+		svg.append('circle')
+			.classed('main-circle', true)
+			.attr('r', radius);
+
+		// draw edges
+		svg.selectAll('path.edge')
+			.data(edges)
+			.enter()
+			.append('path')
+			.attr("class", "link")
+			//.classed('edge', true)
+			.attr('d', circleGraph.line);
+
+		// draw circles
+		svg.selectAll('circle.node')
+			.data(nodes)
+			.enter()
+			.append('circle')
+			.attr("class", "node")
+			//.classed('node', true)
+			.attr('r', 5)
+			.attr('cx', function (d) { return d.x; })
+			.attr('cy', function (d) { return d.y; })
+			.on("click",mouseclicked);
+
+		// draw labels
+		svg.selectAll('text.node')
+			.data(nodes)
+			.enter()
+			.append('text')
+			.classed('node', true)
+			.attr({
+			  'text-anchor': function (d) {
+				return (Math.sin(d.radians) < 0) ? 'end' : 'begin';
+			  },
+			  dy: '0.3em',
+			  dx: function(d) {
+				return (Math.sin(d.radians) < 0) ? '-1em' : '1em';
+			  },
+			  transform: function (d) {
+				var degrees = d.degrees - 90;
+				var xTranslate = radius;
+				if (Math.sin(d.radians) < 0) {
+				  degrees -= 180;
+				  xTranslate *= -1;
+				}
+				return 'rotate(' + degrees + ') translate(' + xTranslate + ', 0)';
+			  }
+			})
+			.text(function(d) {
+			  return d.name;
+			});
+      		
+      	d3.select("#textual")
+			.append("text")
+			.text("Number of sub-occupations in the occupation : " + (nodes.length))
+			.attr("style","display: block");
+		
+	});
+
+	d3.select(self.frameElement).style("height", height + "px");
+
+	div.transition()
+		.duration(200)	
+		.style("opacity", .9)
+		.style("left", (d3.event.pageX) + "px")			 
+		.style("top", (d3.event.pageY - 28) + "px");
+		
+}
+
+
+</script>
